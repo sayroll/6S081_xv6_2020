@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"//加入头文件
 
 uint64
 sys_exit(void)
@@ -95,3 +96,31 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+//从用户空间追踪system call
+uint64 sys_trace(void)
+{
+    int n; //用于存放tracing mask
+
+    if(argint(0,&n)<0)//拿tracing mask
+        return -1;
+    
+    myproc()->syscallnum = n; //注意myproc返回的是一个指针，不是实体，要用->，将n放到对应的结构体里面
+    return 0;
+}
+
+uint64 sys_sysinfo(void)
+{
+  uint64 p; // sysinfo的指针
+  struct sysinfo si;
+   
+  if(argaddr(0, &p) < 0)
+    return -1;
+  si.freemem = memsize(); // 调用函数算空闲内存大小
+  si.nproc = findUSED(); // 计算进程数量
+  if(copyout(myproc()->pagetable, p, (char *)&si, sizeof(si)) < 0) // 从内核态复制到用户态
+    return -1;
+  return 0;
+}
+

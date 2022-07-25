@@ -277,6 +277,9 @@ fork(void)
 
   np->parent = p;
 
+  //加入把tracing mask加入子进程的一行代码
+  np->syscallnum = p->syscallnum;
+
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -692,4 +695,15 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int findUSED()
+{
+  int num=0;
+  for(int i =0;i<NPROC;i++)
+  {
+    if(proc[i].state!=UNUSED)
+      num++;
+  }
+  return num;
 }
