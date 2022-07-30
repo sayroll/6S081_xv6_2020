@@ -127,6 +127,10 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  //初始化新的那些值
+  p->interval = 0;
+  p->passed = 0;
+
   return p;
 }
 

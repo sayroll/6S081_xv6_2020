@@ -132,3 +132,18 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void backtrace(void)
+{
+  uint64 fp;
+  fp = r_fp();//获得当前的frame pointer
+  printf("backtree:\n");
+  uint64 top, btm;
+  btm=PGROUNDDOWN(fp);
+  top=PGROUNDUP(fp);
+  while(fp>btm && fp<top)
+  {
+    printf("%p\n",*(uint64*)(fp-8));
+    fp=*(uint64*)(fp-16);
+  }
+}

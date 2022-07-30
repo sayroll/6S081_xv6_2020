@@ -62,6 +62,7 @@ sys_sleep(void)
     return -1;
   acquire(&tickslock);
   ticks0 = ticks;
+  backtrace();
   while(ticks - ticks0 < n){
     if(myproc()->killed){
       release(&tickslock);
@@ -94,4 +95,28 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64 sys_sigalarm(void)
+{
+  int interval;
+  uint64 handler;
+  if(argint(0,&interval)<0)
+    return -1;
+  if(argaddr(1,&handler)<0)
+    return -1;
+  struct proc *p = myproc();//用于获得当前进程的指针
+
+  p->interval = interval;
+  p->handler =(void(*)()) handler;
+  return 0;
+}
+
+//复原，把empty里的值重新放到trap frame里
+uint64 sys_sigreturn(void)
+{
+  struct proc* p = myproc();
+  memmove(p->trapframe,&(p->empty),sizeof(struct trapframe));
+  p->passed = 0;//置零
+  return 0;
 }

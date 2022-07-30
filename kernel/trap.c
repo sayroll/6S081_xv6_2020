@@ -78,7 +78,17 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
+  {
+    if(p->interval!=0)
+    {
+      if(++p->passed == p->interval)//该中断了
+      {
+        memmove(&(p->empty),p->trapframe,sizeof(struct trapframe));//移到emptyframe里保存
+        p->trapframe->epc =(uint64) p->handler;//把handler的地址传过去
+      }
+    }
     yield();
+  }
 
   usertrapret();
 }
