@@ -46,9 +46,18 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  addr = myproc()->sz;//旧
+  myproc()->sz +=n;//新
+  if(n<0)//参数是负的
+  {
+    if(myproc()->sz < 0)
+      return -1;
+    if(uvmdealloc(myproc()->pagetable,addr,myproc()->sz) != myproc()->sz)
+      return -1;
+  }
+  
+  //if(growproc(n) < 0)  //这是直接申请内存，把这块注释掉
+    //return -1;
   return addr;
 }
 

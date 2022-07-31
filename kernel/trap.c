@@ -65,12 +65,36 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } 
+  else if((which_dev = devintr()) != 0){
     // ok
-  } else {
-    printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    p->killed = 1;
+  } 
+  else 
+  {
+    if(r_scause() == 13 || r_scause() == 15)//是个page fault
+    {
+      uint64 va = r_stval();//虚拟地址
+      if ((va < p->sz) && (va > PGROUNDDOWN(p->trapframe->sp)))//
+      {
+        va = PGROUNDDOWN(va); //根据hint让地址下拉
+        char * mem = kalloc();
+        if(mem == 0)//失败
+          p->killed=1;
+        else if(mappages(p->pagetable,va,PGSIZE,(uint64)mem,PTE_W|PTE_X|PTE_R|PTE_U) != 0)//来个映射
+        {
+          kfree((void*)mem);
+          p->killed=1;
+        }
+      }
+      else
+        p->killed=1; 
+    }
+    else
+    {
+      printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
+      printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      p->killed = 1; 
+    }
   }
 
   if(p->killed)
