@@ -401,6 +401,38 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
+  bn -=NINDIRECT; // 如果在双层映射
+  if(bn<NDBINDIRECT)
+  {
+    uint first = bn/NINDIRECT;
+    uint second = bn%NINDIRECT;
+    if((addr = ip->addrs[NDIRECT+1]) == 0)//如果需要alloc就alloc一下
+    {
+      ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
+    }
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    //第一层
+    if((addr = a[first]) == 0)
+    {
+      a[first] = addr =balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+
+    //第二级
+    bp = bread(ip->dev,addr);
+    a = (uint*)bp->data;
+    if((addr = a[second]) == 0)
+    {
+      a[second] = addr =balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+    return addr;
+  }
+
+
   panic("bmap: out of range");
 }
 
@@ -410,8 +442,8 @@ void
 itrunc(struct inode *ip)
 {
   int i, j;
-  struct buf *bp;
-  uint *a;
+  struct buf *bp,*bp2;
+  uint *a,*b;
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -430,6 +462,32 @@ itrunc(struct inode *ip)
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1])
+  {
+    bp =bread(ip->dev,ip->addrs[NDIRECT+1]);
+    a= (uint*)bp->data;//第一层映射
+    for(j=0;j<NINDIRECT;j++)
+    {
+      if(a[j])//第二层映射
+      {
+        bp2 = bread(ip->dev,a[j]);
+        b=(uint*)bp2->data;
+        for(int m =0;m<NINDIRECT;m++)
+        {
+          if(b[m])
+          {
+              bfree(ip->dev,b[m]);
+          }
+        }
+        brelse(bp2);
+        bfree(ip->dev,a[j]);
+      }
+    }
+    brelse(bp);
+    bfree(ip->dev,ip->addrs[NDIRECT+1]);
+    ip->addrs[NDIRECT+1]=0;
   }
 
   ip->size = 0;
