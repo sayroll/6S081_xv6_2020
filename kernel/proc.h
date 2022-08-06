@@ -1,3 +1,4 @@
+#define MAXVMA 16
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -17,6 +18,19 @@ struct context {
   uint64 s10;
   uint64 s11;
 };
+
+struct vma
+{
+  int valid;                // 是否有效
+  uint64 addr;              // vma开始的虚拟地址
+  int len;                  // 长度
+  int prot;                 // 是否获得许可
+  int flags;               
+  struct file *f;           // 指向被map的文件的指针
+  int off;
+  int valid_len;
+};
+
 
 // Per-CPU state.
 struct cpu {
@@ -103,4 +117,5 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct vma procvma[MAXVMA];
 };
